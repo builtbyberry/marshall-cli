@@ -1,6 +1,7 @@
 name: publish
 
-# Publish @builtbyberry/marshall-cli to npm from a `v*` tag.
+# Publish @builtbyberry/marshall-cli to npm from a `v*` tag, via npm TRUSTED
+# PUBLISHING (OIDC) — no NPM_TOKEN anywhere.
 #
 # Tag-driven: the tag IS the release. A manual `npm publish` from a laptop is how
 # swarm-release-kit's plugin 0.8.1 shipped untagged, and there is no reason to
@@ -11,6 +12,27 @@ name: publish
 # Claude plugin and a shared prefix would have made every plugin release try to
 # publish the CLI. That repo is not this repo — the prefix came across with the
 # move, the reason for it did not.)
+#
+# FOUR THINGS MUST AGREE or the publish fails, and npm validates NONE of them
+# when you save the trusted-publisher config — the first sign of a mismatch is a
+# failed publish:
+#
+#   1. THIS FILE'S NAME (`publish.yml`) must equal the "Workflow filename" field
+#      on npmjs.com exactly, extension included, case-sensitive. Renaming this
+#      file silently breaks publishing.
+#   2. The npmjs.com config must name org `builtbyberry` + repo `marshall-cli`.
+#   3. `package.json` `repository.url` must point at THIS repo. (It pointed at
+#      swarm-release-kit until the move; a stale URL fails the publish outright
+#      regardless of auth.)
+#   4. `id-token: write` below, on a GitHub-HOSTED runner. Self-hosted cannot
+#      mint the OIDC token.
+#
+# Symptoms, so they are decoded rather than guessed at:
+#   - ENEEDAUTH / "Unable to authenticate" -> one of 1-4 disagrees. It is NOT
+#     "the token is missing" — there is no token in this model.
+#   - E422 "Unsupported ... repository visibility: private" -> provenance needs
+#     the source repo PUBLIC. Package access is a different thing; `--access
+#     public` does not answer it.
 on:
   push:
     tags: ['v*']
@@ -20,19 +42,39 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # Required for npm provenance: the OIDC token is what lets npm attest that
-      # this tarball was built by this workflow from this repo. Provenance also
-      # requires this repo to be PUBLIC — npm rejects a private source repo with
-      # E422, and package access (`--access public`) is a different thing that
-      # does not answer it.
+      # The whole authentication story. OIDC mints a short-lived token that npm
+      # trades for publish rights, which is why no secret is configured on this
+      # repo — and why a fork can never publish: it cannot mint this.
       id-token: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 24, not 20: trusted publishing needs npm >= 11.5.1 (Node >= 22.14),
+          # and Node 20 bundles npm 10.x, which does not speak OIDC at all. The
+          # failure reads as an auth error rather than a version error, so it is
+          # worth pinning deliberately. This is the version that PUBLISHES —
+          # unrelated to the >= 18 the package supports, which ci.yml covers.
+          node-version: 24
           registry-url: https://registry.npmjs.org
+
+      - name: npm must be new enough to speak OIDC
+        # Assert the requirement rather than trusting Node 24 to bundle it. A
+        # too-old npm fails later with an auth error that says nothing about
+        # versions; this fails here, saying exactly what is wrong.
+        run: |
+          npm install -g npm@latest
+          VERSION="$(npm --version)"
+          echo "npm ${VERSION}"
+          node -e '
+            const [maj, min, patch] = process.argv[1].split(".").map(Number);
+            const ok = maj > 11 || (maj === 11 && (min > 5 || (min === 5 && patch >= 1)));
+            if (!ok) {
+              console.error(`::error::npm ${process.argv[1]} cannot use trusted publishing; need >= 11.5.1.`);
+              process.exit(1);
+            }
+          ' "$VERSION"
 
       - name: Tag must match package.json
         env:
@@ -57,8 +99,9 @@ jobs:
         run: npm test
 
       - name: Publish
-        # --provenance links the tarball to this commit + workflow on npm.
+        # No --provenance: trusted publishing attests automatically, so the flag
+        # is redundant. No NODE_AUTH_TOKEN: there is no token — an empty one here
+        # would make npm attempt token auth and fail with ENEEDAUTH, which reads
+        # like a missing secret and sends you looking for the wrong thing.
         # No install step: zero dependencies and no lockfile (see ci.yml).
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
