@@ -70,8 +70,10 @@ Resolved per repo, with env overrides:
 
 `backend` is only consulted by `marshall me --require-repo` (the hook's gate).
 Everything else just needs a store and a credential, so a fresh install works
-from any directory. The value stays the literal `"srm"` — it lives in repos'
-tracked config files, so renaming it would break every repo already opted in.
+from any directory. Set `state.backend` to **`"marshall"`** to opt a repo in.
+`"srm"` also works and always will — it is a value existing repos already hold in
+tracked config, so it can never be dropped — but a new repo should write
+`"marshall"`.
 
 `MARSHALL_CONFIG_HOME` relocates the credentials file (the test suite points it at a
 temp dir so it never touches real credentials).

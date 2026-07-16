@@ -89,15 +89,14 @@ test('names no stale MCP tool shape', () => {
     assert.doesNotMatch(tree(), /mcp__srm__/, 'stale tool shape');
 });
 
-test('uses SRM in prose nowhere but the one place that contrasts it', () => {
-    const offenders = tracked().filter((f) => {
-        const body = readFileSync(f, 'utf8');
-        const hits = body.match(/\bSRM\b/g) ?? [];
-        if (hits.length === 0) return false;
-        // The sole legitimate use: a test asserting the error says Marshall while
-        // the frozen backend value stays "srm".
-        return !(hits.length === 1 && body.includes('says Marshall not SRM'));
-    });
+test('uses the uppercase SRM wordmark in prose nowhere', () => {
+    // Until v0.14.0 one test named "...says Marshall not SRM" to encode the
+    // product-vs-backend contrast, and this scan exempted it. Widening
+    // state.backend removed that test, so the exemption described a place that no
+    // longer exists — dropped rather than left as vestigial prose. The backend
+    // value itself is the lowercase literal "srm" (guarded above); the uppercase
+    // wordmark has no remaining legitimate use.
+    const offenders = tracked().filter((f) => /\bSRM\b/.test(readFileSync(f, 'utf8')));
 
     assert.deepEqual(offenders, [], `SRM in prose: ${offenders.join(', ')}`);
 });
@@ -106,8 +105,11 @@ test('the frozen identifiers survive — renaming them would break real repos', 
     const config = readFileSync(join(here, '..', 'lib', 'config.js'), 'utf8');
     const credentials = readFileSync(join(here, '..', 'lib', 'credentials.js'), 'utf8');
 
-    // A consumer's tracked .claude/release-config.json holds this literal.
-    assert.match(config, /backend !== 'srm'/);
+    // A consumer's tracked .claude/release-config.json holds "srm" as a value —
+    // it may be WIDENED (v0.14.0 added "marshall") but never DROPPED, or every
+    // repo already opted in stops being recognised. This asserts "srm" is still
+    // in the accepted-backends set; it fails the moment "srm" leaves it.
+    assert.match(config, /OPTED_IN_BACKENDS = new Set\(\[[^\]]*'srm'/);
     // The older env override, still read as a fallback.
     assert.match(credentials, /SRM_CONFIG_HOME/);
 });
