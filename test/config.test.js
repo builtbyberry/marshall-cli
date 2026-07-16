@@ -73,9 +73,18 @@ test('requireStore asks nothing about the repo — only whether we can reach the
     assert.throws(() => requireStore({ url: 'https://x', token: null }), /marshall login/);
 });
 
-test("requireRepoOptIn is the hook's gate, and says Marshall not SRM", () => {
-    assert.throws(() => requireRepoOptIn({ backend: 'local-json' }), /does not use Marshall/);
+test("requireRepoOptIn is the hook's gate — accepts srm AND marshall, rejects the rest", () => {
+    // Both opt the repo in: the legacy literal every existing repo holds, and the
+    // product-name value a new repo can now write instead.
     assert.doesNotThrow(() => requireRepoOptIn({ backend: 'srm' }));
+    assert.doesNotThrow(() => requireRepoOptIn({ backend: 'marshall' }));
+
+    // Everything else still throws — this is the direction that matters. A
+    // widening that accidentally accepted any value would turn the hook's silence
+    // gate into a greeting in every repo on the machine that has a config at all.
+    assert.throws(() => requireRepoOptIn({ backend: 'local-json' }), /does not use Marshall/);
+    assert.throws(() => requireRepoOptIn({ backend: '' }), /does not use Marshall/);
+    assert.throws(() => requireRepoOptIn({ backend: undefined }), /does not use Marshall/);
 });
 
 test('a stored login supplies the token', () => {
