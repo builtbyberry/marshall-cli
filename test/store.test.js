@@ -29,7 +29,7 @@ after(() => {
 });
 
 /**
- * Spin up a throwaway HTTP server that answers the SRM routes the CLI calls,
+ * Spin up a throwaway HTTP server that answers the Marshall routes the CLI calls,
  * so we exercise the real request path with no network or Laravel.
  *
  * @param {(req: http.IncomingMessage) => { status?: number, body: any }} handler

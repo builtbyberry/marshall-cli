@@ -7,7 +7,7 @@ import { authorizeUrl, exchangeCode, loopbackServer, newState, pkce, registerCli
 import { drifting, held, me, resolveRelease, startable } from '../lib/store.js';
 
 /**
- * The SRM client: the human/CI path to the same shared store the agent reaches
+ * The Marshall client: the human/CI path to the same shared store the agent reaches
  * over MCP. (The agent uses MCP directly — this is not what the skills shell out
  * to for their primary path.)
  *
@@ -357,7 +357,7 @@ main(process.argv.slice(2))
     .catch((err) => {
         if (err instanceof HttpError) {
             const reason = err.body?.error ?? err.message;
-            process.stderr.write(`SRM error (${err.status}): ${reason}\n`);
+            process.stderr.write(`Marshall error (${err.status}): ${reason}\n`);
             if (err.body && typeof err.body === 'object') {
                 process.stderr.write(`${JSON.stringify(err.body, null, 2)}\n`);
             }

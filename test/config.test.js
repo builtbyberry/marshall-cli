@@ -11,7 +11,7 @@ import { DEFAULT_URL } from '../lib/oauth.js';
  * An env with credentials pointed at a throwaway dir.
  *
  * resolveConfig() now reads stored login tokens, and without this every test
- * would fall through to the REAL ~/.config/srm on the developer's machine —
+ * would fall through to the REAL ~/.config/marshall on the developer's machine —
  * quietly reading their live token and passing or failing on it. Isolation here
  * is not tidiness; it is the difference between a test and a coin flip.
  *

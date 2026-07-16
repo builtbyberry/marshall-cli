@@ -1,0 +1,64 @@
+name: publish
+
+# Publish @builtbyberry/marshall-cli to npm from a `v*` tag.
+#
+# Tag-driven: the tag IS the release. A manual `npm publish` from a laptop is how
+# swarm-release-kit's plugin 0.8.1 shipped untagged, and there is no reason to
+# recreate that here.
+#
+# `v*` is unambiguous in this repo: it ships exactly one artifact. (In
+# swarm-release-kit the prefix was `cli-v*`, because `v*` there belonged to the
+# Claude plugin and a shared prefix would have made every plugin release try to
+# publish the CLI. That repo is not this repo — the prefix came across with the
+# move, the reason for it did not.)
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required for npm provenance: the OIDC token is what lets npm attest that
+      # this tarball was built by this workflow from this repo. Provenance also
+      # requires this repo to be PUBLIC — npm rejects a private source repo with
+      # E422, and package access (`--access public`) is a different thing that
+      # does not answer it.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Tag must match package.json
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          # The CLI has no CHANGELOG, so its version lives in exactly two places:
+          # the manifest and the tag. Refuse to publish when they disagree — a
+          # published version that no tag points at is unreproducible, and a tag
+          # that ships a different number is worse.
+          MANIFEST="$(node -p "require('./package.json').version")"
+          EXPECTED="v${MANIFEST}"
+
+          if [ "$TAG" != "$EXPECTED" ]; then
+            echo "::error::Tag ${TAG} does not match package.json (${MANIFEST}). Expected ${EXPECTED}."
+            echo "Bump the manifest and re-tag, or tag the version you meant to ship."
+            exit 1
+          fi
+
+          echo "Tag ${TAG} matches manifest ${MANIFEST}."
+
+      - name: Test before publishing
+        run: npm test
+
+      - name: Publish
+        # --provenance links the tarball to this commit + workflow on npm.
+        # No install step: zero dependencies and no lockfile (see ci.yml).
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

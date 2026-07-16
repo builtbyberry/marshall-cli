@@ -1,12 +1,13 @@
 # @builtbyberry/marshall-cli
 
-The **Swarm Release Manager** client — the human path to the same shared store
-the agent reaches over MCP. Read-only today: see what's startable and who holds
-what, from a terminal or a script.
+The **Marshall** client — the human path to the same shared store the agent
+reaches over MCP. Read-only today: see what's startable and who holds what, from
+a terminal or a script.
 
 This is *not* what the Claude plugin's skills call. They drive the store's MCP
-tools directly (`mcp__srm__release_next`, …); this CLI is the secondary path for
-people, and the fallback the skills name when the MCP server isn't connected.
+tools directly (`mcp__plugin_marshall_marshall__release_next`, …); this CLI is
+the secondary path for people, and the fallback the skills name when the MCP
+server isn't connected.
 
 Zero runtime dependencies. Node ≥ 18.
 

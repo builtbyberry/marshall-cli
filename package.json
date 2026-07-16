@@ -1,6 +1,6 @@
 {
     "name": "@builtbyberry/marshall-cli",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "The Marshall client: the human path to the shared Marshall release store \u2014 what's startable, who holds what, and what drifted.",
     "type": "module",
     "bin": {
@@ -20,8 +20,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/builtbyberry/swarm-release-kit.git",
-        "directory": "cli/marshall"
+        "url": "git+https://github.com/builtbyberry/marshall-cli.git"
     },
     "keywords": [
         "marshall",
@@ -34,5 +33,5 @@
         "access": "public"
     },
     "license": "MIT",
-    "homepage": "https://github.com/builtbyberry/swarm-release-kit/tree/main/cli/marshall"
+    "homepage": "https://github.com/builtbyberry/marshall-cli"
 }
