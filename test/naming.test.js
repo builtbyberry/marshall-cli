@@ -32,10 +32,23 @@ import { test } from 'node:test';
  * the product name; an identifier a CONSUMER holds is frozen.
  */
 
+/**
+ * Every tracked file except this one.
+ *
+ * This file is excluded because it is the only file that must SAY the retired
+ * names in order to forbid them — its own prose would trip all three checks
+ * below. Nothing else gets an exemption.
+ *
+ * Worth knowing how this surfaced, because it is a trap that hides itself:
+ * `git ls-files` lists TRACKED files, so while this test was still unstaged it
+ * silently excluded itself and passed. Committing it is what made it scan its
+ * own docstring — green locally, red in CI, from an identical tree.
+ */
 const tracked = () =>
     execFileSync('git', ['ls-files'], { cwd: join(import.meta.dirname, '..'), encoding: 'utf8' })
         .split('\n')
         .filter(Boolean)
+        .filter((f) => f !== 'test/naming.test.js')
         .map((f) => join(import.meta.dirname, '..', f))
         .filter((f) => statSync(f).isFile());
 
