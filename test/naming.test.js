@@ -1,8 +1,16 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+
+// NOT `import.meta.dirname`: that landed in Node 20.11, and this package promises
+// Node >= 18 in `engines`. It is undefined on 18, so join() throws
+// ERR_INVALID_ARG_TYPE and every test in this file errors. Caught by the CI
+// matrix, not locally — a dev on 20+ never sees it, which is the whole reason
+// the matrix tests the floor it advertises rather than just current LTS.
+const here = dirname(fileURLToPath(import.meta.url));
 
 /**
  * The product name is Marshall. The retired names must not come back.
@@ -45,11 +53,11 @@ import { test } from 'node:test';
  * own docstring — green locally, red in CI, from an identical tree.
  */
 const tracked = () =>
-    execFileSync('git', ['ls-files'], { cwd: join(import.meta.dirname, '..'), encoding: 'utf8' })
+    execFileSync('git', ['ls-files'], { cwd: join(here, '..'), encoding: 'utf8' })
         .split('\n')
         .filter(Boolean)
         .filter((f) => f !== 'test/naming.test.js')
-        .map((f) => join(import.meta.dirname, '..', f))
+        .map((f) => join(here, '..', f))
         .filter((f) => statSync(f).isFile());
 
 /**
@@ -95,8 +103,8 @@ test('uses SRM in prose nowhere but the one place that contrasts it', () => {
 });
 
 test('the frozen identifiers survive — renaming them would break real repos', () => {
-    const config = readFileSync(join(import.meta.dirname, '..', 'lib', 'config.js'), 'utf8');
-    const credentials = readFileSync(join(import.meta.dirname, '..', 'lib', 'credentials.js'), 'utf8');
+    const config = readFileSync(join(here, '..', 'lib', 'config.js'), 'utf8');
+    const credentials = readFileSync(join(here, '..', 'lib', 'credentials.js'), 'utf8');
 
     // A consumer's tracked .claude/release-config.json holds this literal.
     assert.match(config, /backend !== 'srm'/);
